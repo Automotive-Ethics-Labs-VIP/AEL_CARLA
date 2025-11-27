@@ -7,6 +7,7 @@
 #include "Carla.h"
 #include "Carla/Walker/WalkerController.h"
 #include "Carla/Walker/WalkerAnim.h"
+#include "Carla/Walker/WalkerAttributesComponent.h"
 
 #include "Components/PoseableMeshComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -43,6 +44,9 @@ void AWalkerController::OnPossess(APawn *InPawn)
   MovementComponent->MaxWalkSpeed = GetMaximumWalkSpeed();
   MovementComponent->JumpZVelocity = 500.0f;
   Character->JumpMaxCount = 2;
+
+  // Cache the walker attributes component for performance
+  CachedAttributesComponent = Character->FindComponentByClass<UWalkerAttributesComponent>();
 }
 
 void AWalkerController::ApplyWalkerControl(const FWalkerControl &InControl)
@@ -171,8 +175,15 @@ void AWalkerController::ControlTickVisitor::operator()(const FWalkerControl &Wal
   auto *Character = Controller->GetCharacter();
   if (!Character) return;
 
+  // Get speed multiplier from cached WalkerAttributesComponent if present
+  float SpeedMultiplier = 1.0f;
+  if (Controller->CachedAttributesComponent)
+  {
+    SpeedMultiplier = Controller->CachedAttributesComponent->GetEffectiveSpeedMultiplier();
+  }
+
   Character->AddMovementInput(WalkerControl.Direction,
-        WalkerControl.Speed / Controller->GetMaximumWalkSpeed());
+        (WalkerControl.Speed * SpeedMultiplier) / Controller->GetMaximumWalkSpeed());
   if (WalkerControl.Jump)
   {
     Character->Jump();

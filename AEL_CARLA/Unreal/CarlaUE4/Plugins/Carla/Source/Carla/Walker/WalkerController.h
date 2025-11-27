@@ -20,6 +20,8 @@
 
 #include "WalkerController.generated.h"
 
+class UWalkerAttributesComponent;
+
 UCLASS()
 class CARLA_API AWalkerController : public AController
 {
@@ -80,4 +82,8 @@ public:
 private:
 
   boost::variant<FWalkerControl> Control;
+
+  /// Cached reference to the walker's attributes component (if present)
+  UPROPERTY()
+  UWalkerAttributesComponent *CachedAttributesComponent = nullptr;
 };
