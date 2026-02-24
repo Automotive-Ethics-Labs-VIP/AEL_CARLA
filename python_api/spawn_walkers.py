@@ -1,17 +1,20 @@
-import carla
+from .adapter import SimulatorAdapter
 from .ethical_attributes import EthicalAttributeSchema, AgeGroup, Disability, SocialRole
 from .actor_registry import EthicalActorRegistry
 import random
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 
 class EthicalWalkerSpawner:
-    def __init__(self, client: carla.Client, world: carla.World, registry: Optional[EthicalActorRegistry] = None):
-        self.client = client # store the carla client for batch operations
-        self.world = world
-        self.registry = registry if registry is not None else EthicalActorRegistry()
-        self.blueprint_library = world.get_blueprint_library()
-        self.spawned_walkers: List[carla.Actor] = []
+    def __init__(
+        self,
+        adapter: SimulatorAdapter,
+        registry: Optional[EthicalActorRegistry] = None,
+    ) -> None:
+        self._adapter  = adapter 
+        self.registry  = registry if registry is not None else EthicalActorRegistry()
+        self._bp_lib   = adapter.get_blueprint_library()
+        self.spawned_walkers: List = []
      
     def _generate_ethical_attributes(self, walker_bp) -> EthicalAttributeSchema:
         """
@@ -66,94 +69,50 @@ class EthicalWalkerSpawner:
             social_role=social_role
         )
 
-    def spawn_walker(self, spawn_point: carla.Transform, walker_bp: Optional[carla.ActorBlueprint] = None) -> carla.Actor:
-        """
-        Spawn a single walker with ethical attributes.
-        
-        Args:
-            spawn_point: Transform location for spawning
-            walker_bp: Optional specific walker blueprint. Random if not provided.
-            
-        Returns:
-            Spawned walker actor
-            
-        Raises:
-            RuntimeError: If spawning fails
-        """
-
+    def spawn_walker(self, spawn_point, walker_bp=None):
         if walker_bp is None:
-            walker_blueprints = self.blueprint_library.filter('walker.pedestrian.*')
-            walker_bp = random.choice(walker_blueprints)
-        
-        walker = self.world.try_spawn_actor(walker_bp, spawn_point)
-        
-        if walker is None:
-            raise RuntimeError(f"Failed to spawn walker at {spawn_point.location}")
-        
+            walker_bp = random.choice(self._bp_lib.filter('walker.pedestrian.*'))
+
+        actor_id = self._adapter.spawn_walker(spawn_point, walker_bp) 
+        if actor_id is None:
+            raise RuntimeError(f"Failed to spawn walker at {spawn_point}")
+
         attributes = self._generate_ethical_attributes(walker_bp)
-        self.registry.register(walker.id, attributes)
-        
-        self.spawned_walkers.append(walker)
-        
-        return walker
-        
-    def spawn_walkers_batch(self, spawn_points: List[carla.Transform], num_walkers: Optional[int] = None) -> List[carla.Actor]:
-        """
-        Spawn multiple walkers with ethical attributes using CARLA's batch API.
-        
-        This method is much faster than individual spawns because it uses a single
-        RPC call to spawn all walkers at once.
-        
-        Args:
-            spawn_points: List of spawn locations
-            num_walkers: Number of walkers to spawn. Uses all spawn points if None.
-            
-        Returns:
-            List of spawned walker actors
-        """
+        self.registry.register(actor_id, attributes)
+
+        actor = self._adapter.get_actor(actor_id)
+        if actor is not None:
+            self.spawned_walkers.append(actor)
+        return actor
+
+    def spawn_walkers_batch(self, spawn_points, num_walkers=None):
         if num_walkers is None:
             num_walkers = len(spawn_points)
-        
         num_walkers = min(num_walkers, len(spawn_points))
-        
-        # Prepare blueprints and attributes before batch spawn
-        walker_blueprints = self.blueprint_library.filter('walker.pedestrian.*')
-        spawn_commands = []
-        blueprint_attr_pairs: List[Tuple[carla.ActorBlueprint, EthicalAttributeSchema]] = []
-        
+
+        walker_blueprints = self._bp_lib.filter('walker.pedestrian.*')
+        commands = []
+        bp_attr_pairs = []
+
         for i in range(num_walkers):
-            # Select random blueprint
-            walker_bp = random.choice(walker_blueprints)
-            
-            # Generate attributes in advance (before spawning)
+            walker_bp  = random.choice(walker_blueprints)
             attributes = self._generate_ethical_attributes(walker_bp)
-            blueprint_attr_pairs.append((walker_bp, attributes))
-            
-            # Create spawn command
-            spawn_commands.append(carla.command.SpawnActor(walker_bp, spawn_points[i]))
-        
-        # Execute batch spawn
-        batch_results = self.client.apply_batch_sync(spawn_commands, do_tick=False)
-        
-        # Process results and register attributes
+            bp_attr_pairs.append((walker_bp, attributes))
+            commands.append(self._adapter.make_spawn_command(walker_bp, spawn_points[i]))
+
+        batch_results = self._adapter.spawn_walkers_batch(commands)
+
         walkers = []
         for i, response in enumerate(batch_results):
             if response.error:
-                print(f"Warning: Could not spawn walker {i}: {response.error}")
                 continue
-            
-            # Get the spawned actor
             actor_id = response.actor_id
-            walker = self.world.get_actor(actor_id)
-            
-            if walker is not None:
-                # Register the pre-generated attributes
-                _, attributes = blueprint_attr_pairs[i]
-                self.registry.register(actor_id, attributes)
-                
-                self.spawned_walkers.append(walker)
-                walkers.append(walker)
-        
+            _, attributes = bp_attr_pairs[i]
+            self.registry.register(actor_id, attributes)
+            actor = self._adapter.get_actor(actor_id)
+            if actor is not None:
+                self.spawned_walkers.append(actor)
+                walkers.append(actor)
         return walkers
     
     def get_walker_attributes(self, walker_id: int) -> Optional[EthicalAttributeSchema]:

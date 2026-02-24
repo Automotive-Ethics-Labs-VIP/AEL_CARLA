@@ -2,10 +2,14 @@ from .ethical_attributes import (
     EthicalAttributeSchema,
     AgeGroup,
     Disability,
-    SocialRole
+    SocialRole,
 )
 from .actor_registry import EthicalActorRegistry
 from .spawn_walkers import EthicalWalkerSpawner
+from .adapter import SimulatorAdapter, CARLAAdapter
+from .collector import DataCollector
+from .stream.server import StreamServer
+from .stream.client import StreamClient
 
 __all__ = [
     'EthicalAttributeSchema',
@@ -14,4 +18,9 @@ __all__ = [
     'SocialRole',
     'EthicalActorRegistry',
     'EthicalWalkerSpawner',
+    'SimulatorAdapter',
+    'CARLAAdapter',
+    'DataCollector',
+    'StreamServer',
+    'StreamClient',
 ]
