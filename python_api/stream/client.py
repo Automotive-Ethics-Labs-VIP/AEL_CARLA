@@ -77,9 +77,9 @@ class StreamClient:
             (payload_length,) = struct.unpack(_HEADER_FMT, header)
 
             # Guard against absurdly large frames (e.g. corrupt stream)
-            if payload_length > 10 * 1024 * 1024:  # 10 MB hard cap
+            if payload_length > 100 * 1024 * 1024:  # 100 MB hard cap
                 raise ValueError(
-                    f"Frame payload length {payload_length} exceeds 10 MB cap. "
+                    f"Frame payload length {payload_length} exceeds 100 MB cap. "
                     "Possible stream corruption."
                 )
 

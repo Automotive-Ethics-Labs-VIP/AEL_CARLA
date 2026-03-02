@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from typing import Any, Dict, List, Optional
+import os
 
 from .actor_registry import EthicalActorRegistry
 from .adapter import SimulatorAdapter
@@ -101,12 +102,14 @@ class DataCollector:
 
         self._interval = 1.0 / hz
         self._running  = True
+        self._pid = os.getpid()
         self._thread   = threading.Thread(
             target=self._collection_loop,
             daemon=True,
             name="data-collector",
         )
         self._thread.start()
+        self._thread_id = self._thread.ident
 
     def stop(self) -> None:
         """
@@ -188,6 +191,7 @@ class DataCollector:
             skip the sleep entirely, increment frames_late, and continue
             immediately so we don't fall further behind.
         """
+        self._thread_native_id = threading.get_native_id()
         while self._running:
             cycle_start = time.monotonic()
 

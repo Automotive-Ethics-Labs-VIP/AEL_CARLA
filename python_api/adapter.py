@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 import time
+import math
+import uuid
+from .ethical_attributes import AgeGroup
+import random
 
 @runtime_checkable
 class SimulatorAdapter(Protocol):
@@ -221,7 +225,7 @@ class MockAdapter:
     def __init__(self, num_spawn_points: int = 50) -> None:
         self._num_spawn_points = num_spawn_points
         self._actors: Dict[int, Dict[str, Any]] = {}
-        self._next_id    = 1
+        self._destroyed_ids = set()
         self._tick_count = 0
         self._sim_time   = 0.0
 
@@ -231,12 +235,15 @@ class MockAdapter:
 
     def get_spawn_points(self) -> List[Dict[str, float]]:
         """Return synthetic spawn point dicts spread on a grid."""
-        import math
+        cols = math.ceil(math.sqrt(self._num_spawn_points))
         return [
-            {"x": float(i * 2), "y": math.sin(i) * 5.0, "z": 0.0}
+            {
+                "x": float((i % cols) * 2),
+                "y": float((i // cols) * 2),
+                "z": 0.0,
+            }
             for i in range(self._num_spawn_points)
         ]
-
     def get_blueprint_library(self) -> "_MockBlueprintLibrary":
         return _MockBlueprintLibrary()
 
@@ -246,26 +253,28 @@ class MockAdapter:
         return {"blueprint": blueprint, "spawn_point": spawn_point}
 
     def spawn_walker(self, spawn_point: Any, blueprint: Any) -> int:
-        actor_id = self._next_id
-        self._next_id += 1
+        actor_id = uuid.uuid4().int
         self._actors[actor_id] = _make_mock_actor(actor_id)
         return actor_id
 
     def spawn_walkers_batch(self, commands: List[Any]) -> List["_MockBatchResponse"]:
-        responses: List[_MockBatchResponse] = []
-        for _ in commands:
-            actor_id = self._next_id
-            self._next_id += 1
-            self._actors[actor_id] = _make_mock_actor(actor_id)
-            responses.append(_MockBatchResponse(actor_id=actor_id, error=None))
-        return responses
+        return [
+        _MockBatchResponse(
+            actor_id=self.spawn_walker(cmd["spawn_point"], cmd["blueprint"]),
+            error=None,
+        )
+        for cmd in commands
+    ]
 
     def get_actor(self, actor_id: int) -> Optional[Dict[str, Any]]:
+        if actor_id in self._destroyed_ids:
+            return None
         return self._actors.get(actor_id)
 
     def destroy_actor(self, actor_id: int) -> bool:
         if actor_id in self._actors:
             del self._actors[actor_id]
+            self._destroyed_ids.add(actor_id)
             return True
         return False
 
@@ -290,8 +299,9 @@ class MockAdapter:
                 "controls": {"throttle": 0.5, "steer": 0.0, "brake": 0.0},
             },
             "scene_metadata": {
+                # the metadata is fixed in MockAdapter, but in CARLAAdapter, they will change depending on the map and the weather in the map
                 "weather": "clear_noon",
-                "map":     "MockTown",
+                "map":     "MockTown", 
             },
         }
 
@@ -330,18 +340,18 @@ class _MockBatchResponse:
 class _MockBlueprintLibrary:
     """Minimal stand-in for carla.BlueprintLibrary."""
 
-    _BLUEPRINTS = [
-        ("walker.pedestrian.0001", "female"),
-        ("walker.pedestrian.0002", "male"),
-        ("walker.pedestrian.0003", "female"),
-        ("walker.pedestrian.0004", "male"),
-        ("walker.pedestrian.0005", "female"),
-        ("walker.pedestrian.0006", "male"),
-    ]
+    _GENDERS = ["male", "female"]
+    _AGES = [a.value for a in AgeGroup]
 
     def filter(self, pattern: str) -> List["_MockBlueprint"]:
         """Return synthetic blueprints matching a glob pattern (pattern ignored in mock)."""
-        return [_MockBlueprint(bp_id, gender) for bp_id, gender in self._BLUEPRINTS]
+        return [
+        _MockBlueprint(
+            f"walker.pedestrian.{i:04d}",
+            random.choice(self._GENDERS)
+        )
+        for i in range(6)
+    ]
 
 
 class _MockBlueprint:

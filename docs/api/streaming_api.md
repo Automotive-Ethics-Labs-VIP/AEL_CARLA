@@ -13,7 +13,6 @@ The streaming system exports simulation snapshots with ethical metadata at up to
 5. [StreamServer](#streamserver)
 6. [StreamClient](#streamclient)
 7. [End-to-End Example](#end-to-end-example)
-8. [Performance Notes](#performance-notes)
 
 ---
 
