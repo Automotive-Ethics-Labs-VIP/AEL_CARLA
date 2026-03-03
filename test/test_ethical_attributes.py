@@ -50,7 +50,9 @@ def registry():
 @pytest.fixture
 def spawner(carla_client, world, registry):
     """Create walker spawner with real CARLA world."""
-    return EthicalWalkerSpawner(carla_client, world, registry)
+    from python_api.adapter import CARLAAdapter
+    adapter = CARLAAdapter(carla_client, world)
+    return EthicalWalkerSpawner(adapter, registry)
 
 
 @pytest.fixture
