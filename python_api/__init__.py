@@ -10,6 +10,7 @@ from .adapter import SimulatorAdapter, CARLAAdapter
 from .collector import DataCollector
 from .stream.server import StreamServer
 from .stream.client import StreamClient
+from .stream.aggregator import StreamAggregator
 
 __all__ = [
     'EthicalAttributeSchema',
@@ -23,4 +24,5 @@ __all__ = [
     'DataCollector',
     'StreamServer',
     'StreamClient',
+    'StreamAggregator'
 ]
