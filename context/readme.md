@@ -121,6 +121,6 @@
 
 ## Notes
 
-**Branch:** `team-b-custom-pedestrians`
+**Branch:** `main`
 
 This project extends CARLA with ethical metadata for pedestrian walkers without modifying CARLA's core source code. The ethical attribute system enables AI training for scenarios involving vulnerable populations and ethical decision-making.

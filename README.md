@@ -3,7 +3,7 @@
 ## Overview
 Custom CARLA build for RLHF-based ethical decision-making with modified walker blueprints.
 
-**Branch:** `team-b-custom-pedestrians`
+**Branch:** `main`
 
 ## Workflow
 
