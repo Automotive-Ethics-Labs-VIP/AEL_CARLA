@@ -46,10 +46,10 @@ pip install carla==0.9.13
 
 ## Quick start (no CARLA needed)
 
-Run the tests. `test_ethical_attributes.py` imports `carla`, so skip it unless the client is installed:
+Run the tests. Tests that need a live server skip unless you pass `--carla`:
 
 ```bash
-python -m pytest test -q --ignore=test/test_ethical_attributes.py
+python -m pytest test -q
 ```
 
 Generate trajectory pairs against the mock world:
@@ -58,26 +58,28 @@ Generate trajectory pairs against the mock world:
 python -m python_api.generate_training_data --mock --num_pairs 10 --output data/unannotated_pairs.json
 ```
 
-On Windows, set `PYTHONIOENCODING=utf-8` first, or the progress output crashes the console. Annotation of the output happens in the Ethical_Head repo (`scripts/annotate_trajectories.py`).
+Annotation of the output happens in the Ethical_Head repo (`scripts/annotate_trajectories.py`). With a CARLA server running, drop `--mock` and pass `--carla_host` / `--carla_port` (default `localhost:2000`).
 
-With a CARLA server running, drop `--mock` and pass `--carla_host` / `--carla_port` (default `localhost:2000`).
+## State vector: ael-v1
 
-## State vector (40-D)
+The extractor outputs **ael-v1**, the 40-D layout defined in [ael-common](https://github.com/Automotive-Ethics-Labs-VIP/ael-common): the layout the CATA-200 scenarios and the trained Ethical Head use. See the ael-common README for what each index means. Vectors are built with `ael_common.encode()` and checked again before `generate_training_data` writes them.
 
-| Index | Feature |
-|---|---|
-| 0–3 | ego speed, passenger count, lane position, speed change |
-| 4–6 | pedestrian count in straight / left / right path |
-| 7–39 | 11 features × 3 directions (straight, left, right): actor count, child, elderly, wheelchair, cane, blind, pregnant, emergency, healthcare, max and mean vulnerability |
+How a frame maps onto ael-v1 (details in `python_api/state_vector_extractor.py`):
 
-Full definition in `python_api/state_vector_extractor.py`.
+- **Paths:** actors within ±22.5° of the ego heading are straight; 22.5–90° to either side are left or right; actors behind or beyond 50 m are ignored.
+- **Obstacle types** come from the actor's blueprint (`walker.*` = pedestrian, bikes = cyclist, `static.prop.*barrier*` = barrier, ...). A scenario can force a type with an `obstacle_type` field.
+- **Casualties** follow Team C's CATA-200 counting: 1 per pedestrian, cyclist or motorcyclist; a vehicle's `occupants` (default 1); the ego's passengers for a barrier.
+- **Vulnerable groups** come from pedestrians: child, elderly, pregnant, disabled (wheelchair, cane or blind).
+
+The test suite rebuilds all 200 CATA scenarios as scenes and checks the extractor returns exactly the lab's vectors.
 
 ## Current status and known gaps
 
 - **No GPU environment yet.** Building the CARLA 0.9.13 Singularity image on SeaWulf gets killed during extraction (ticket open with Research Computing), so nothing here has run against a real CARLA server on HPC. The commands in `build-scripts/` and `container/` are not working yet.
 - **No ego vehicle in the data pipeline.** `generate_training_data.py` never spawns or drives an ego vehicle, and the policy's actions are recorded but never applied to the simulation.
-- **Lane position is world y**, not an offset from the lane centre.
-- **Layout mismatch with the Ethical Head.** The extractor's 40-D layout differs from the one the Ethical Head was trained on (Team C's layout: left/straight/right blocks with object types). Don't feed this output to the trained model until the layouts are reconciled.
+- **Lane position is always 0** until a real lane offset is computed from the CARLA map.
+- **Untested on real CARLA:** the blueprint-to-obstacle mapping and the left/right convention are checked against the mock only. Verify both on the first real run.
+- **Actions are still 5-action IDs** (Team A's annotation format) in generated trajectories; ael-v1 uses 3. Aligning them is the next step on the Ethical_Head side.
 
 ## Docs
 
