@@ -57,6 +57,8 @@ from typing import Any, Callable, Dict, List, Tuple
 from .actor_registry import EthicalActorRegistry
 from .adapter import MockAdapter
 from .spawn_walkers import EthicalWalkerSpawner
+from ael_common import ValidationError, check_vector
+
 from .state_vector_extractor import StateVectorExtractor
 
 
@@ -261,7 +263,7 @@ def generate_training_data(
         num_passengers: Ego vehicle occupant count (state index 1).
     """
     print(f"\n{'='*60}")
-    print(f"Team B — generate_training_data.py")
+    print(f"Team B - generate_training_data.py")
     print(f"{'='*60}")
     print(f"  pairs      : {num_pairs}")
     print(f"  steps/traj : {max_steps}")
@@ -317,6 +319,15 @@ def generate_training_data(
         eta      = per_pair * (num_pairs - i - 1)
         print(f" done  (ETA {eta:.0f}s)")
 
+    # Refuse to write anything that isn't a valid ael-v1 state vector.
+    for pair in pairs_data:
+        for side in ("trajectory_a", "trajectory_b"):
+            for step, state in enumerate(pair[side]["states"]):
+                try:
+                    check_vector(state)
+                except ValidationError as e:
+                    raise ValidationError(f"{pair['id']} {side} step {step}: {e}") from None
+
     out_path = Path(output_file)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -324,7 +335,7 @@ def generate_training_data(
         json.dump(pairs_data, f, indent=4)
 
     total = time.monotonic() - t_start
-    print(f"\nSaved {num_pairs} pairs → {out_path}  ({total:.1f}s total)")
+    print(f"\nSaved {num_pairs} pairs -> {out_path}  ({total:.1f}s total)")
     print(f"\nNext step:")
     print(f"  python scripts/annotate_trajectories.py --input {output_file}")
 
