@@ -247,16 +247,38 @@ class DataCollector:
             entry: Dict[str, Any] = {
                 # Node-prefixed ID guarantees uniqueness across distributed nodes.
                 "id":                  f"{self._node_id}-{actor_id}",
+                "type":                _type_id(actor_obj),
                 "age_group":           attrs.age_group.value       if attrs else None,
                 "disability":          attrs.disability.value      if attrs else None,
+                "pregnancy":           attrs.pregnancy             if attrs else None,
                 "social_role":         attrs.social_role.value     if attrs else None,
                 "vulnerability_score": attrs.vulnerability_score   if attrs else None,
                 "position":            position,
                 "velocity":            velocity,
             }
+            base_type = _base_type(actor_obj)
+            if base_type:
+                entry["base_type"] = base_type
             result.append(entry)
 
         return result
+
+
+def _type_id(actor_obj: Any) -> Optional[str]:
+    """Blueprint id of a CARLA actor ("walker.pedestrian.0001") or a mock dict's "type"."""
+    if actor_obj is None:
+        return None
+    if isinstance(actor_obj, dict):
+        return actor_obj.get("type")
+    return getattr(actor_obj, "type_id", None)
+
+
+def _base_type(actor_obj: Any) -> Optional[str]:
+    """CARLA's base_type attribute (car, truck, bicycle, ...), present from CARLA 0.9.14."""
+    if actor_obj is None or isinstance(actor_obj, dict):
+        return None
+    attributes = getattr(actor_obj, "attributes", None) or {}
+    return attributes.get("base_type") or None
 
 
 def _extract_kinematics(actor_obj: Any) -> tuple[List[float], List[float]]:

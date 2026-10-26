@@ -177,6 +177,11 @@ class CARLAAdapter:
                     transform.location.y,
                     transform.location.z,
                 ],
+                "rotation": [
+                    transform.rotation.pitch,
+                    transform.rotation.yaw,
+                    transform.rotation.roll,
+                ],
                 "velocity": [velocity.x, velocity.y, velocity.z],
                 "controls": {
                     "throttle": control.throttle,
@@ -284,7 +289,9 @@ class MockAdapter:
         self._sim_time   += 0.05
         
         return {
-            "timestamp": time.monotonic(),
+            # Simulated seconds, like CARLAAdapter's elapsed_seconds. Wall-clock time
+            # can repeat between quick calls on Windows (~15 ms clock resolution).
+            "timestamp": self._sim_time,
             "sensor_bundle": {
                 "rgb":   "",
                 "depth": "",
@@ -295,6 +302,7 @@ class MockAdapter:
             },
             "vehicle_state": {
                 "position": [0.0, 0.0, 0.0],
+                "rotation": [0.0, 0.0, 0.0],
                 "velocity": [5.0, 0.0, 0.0],
                 "controls": {"throttle": 0.5, "steer": 0.0, "brake": 0.0},
             },

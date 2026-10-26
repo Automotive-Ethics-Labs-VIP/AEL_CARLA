@@ -1,7 +1,6 @@
 import pytest
 import json
 import threading
-import carla
 import time
 import tempfile
 from pathlib import Path
@@ -11,7 +10,8 @@ from python_api import EthicalActorRegistry, AgeGroup, Disability, SocialRole, E
 
 @pytest.fixture(scope="session")
 def carla_client():
-    """Connect to CARLA server once for all tests."""
+    """Connect to CARLA server once for all tests. Skips if the carla package isn't installed."""
+    carla = pytest.importorskip("carla")
     try:
         client = carla.Client('localhost', 2000)
         client.set_timeout(10.0)

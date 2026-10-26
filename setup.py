@@ -8,6 +8,7 @@ setup(
     packages=["python_api", "python_api.stream"],
     install_requires=[
         "pydantic>=2.0",
+        "ael-common @ git+https://github.com/Automotive-Ethics-Labs-VIP/ael-common@v0.1.1",
     ],
     extras_require={
         "dev": [
