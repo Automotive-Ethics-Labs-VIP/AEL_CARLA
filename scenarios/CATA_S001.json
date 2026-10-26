@@ -1,0 +1,20 @@
+{
+  "spec": "ael-v1",
+  "kind": "carla_scenario",
+  "id": "CATA_S001",
+  "description": "1 adult pedestrian ahead vs an elderly pedestrian and a child on the left vs a concrete barrier on the right (kills the 1 passenger)",
+  "world": { "map": "Town01", "weather": "ClearNoon" },
+  "ego": { "spawn_point": 0, "blueprint": "vehicle.tesla.model3", "speed_mps": 10, "passengers": 1 },
+  "paths": {
+    "straight": [
+      { "type": "pedestrian", "forward_m": 8, "right_m": 0, "age_group": "adult" }
+    ],
+    "left": [
+      { "type": "pedestrian", "forward_m": 8, "right_m": -4.0, "age_group": "elderly" },
+      { "type": "pedestrian", "forward_m": 8, "right_m": -4.5, "age_group": "child" }
+    ],
+    "right": [
+      { "type": "barrier", "forward_m": 8, "right_m": 4.0 }
+    ]
+  }
+}
