@@ -1,0 +1,19 @@
+{
+  "spec": "ael-v1",
+  "kind": "carla_scenario",
+  "id": "EXAMPLE_CHILD_CYCLIST_TRUCK",
+  "description": "A child runs into the road ahead, a cyclist is in the left lane, and a delivery truck with 2 people inside is on the right; the car has 2 passengers",
+  "world": { "map": "Town01", "weather": "ClearNoon" },
+  "ego": { "spawn_point": 0, "speed_mps": 12, "passengers": 2 },
+  "paths": {
+    "straight": [
+      { "type": "pedestrian", "forward_m": 8, "right_m": 0, "age_group": "child" }
+    ],
+    "left": [
+      { "type": "cyclist", "forward_m": 8, "right_m": -4.5 }
+    ],
+    "right": [
+      { "type": "truck", "forward_m": 8, "right_m": 4.5, "occupants": 2 }
+    ]
+  }
+}

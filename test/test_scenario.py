@@ -103,6 +103,17 @@ def test_example_file_passes_and_matches_lab_vector():
     assert encode(declared_state(scenario)) == load_cata_200()["CATA_S001"]
 
 
+SCENARIO_FILES = sorted(
+    os.path.join(ROOT, "scenarios", f) for f in os.listdir(os.path.join(ROOT, "scenarios")) if f.endswith(".json")
+)
+
+
+@pytest.mark.parametrize("path", SCENARIO_FILES, ids=os.path.basename)
+def test_every_committed_scenario_file_passes(path):
+    scenario = load_scenario(path)
+    assert scenario.id == os.path.splitext(os.path.basename(path))[0], "file name must match the scenario id"
+
+
 def test_every_cata_scenario_can_be_written_as_a_valid_file():
     for sid, vec in sorted(load_cata_200().items()):
         scenario, problems = parse_scenario(scenario_from_vector(sid, vec))
